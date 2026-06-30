@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Curated Copenhagen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{background:#F6F4F0;color:#1E2027;font-family:'Space Grotesk',sans-serif;-webkit-font-smoothing:antialiased;}
+:root{--accent:#6F79C2;--accent-soft:#8C95D6;--line:#E2DDD3;--ink:#1E2027;--ink-soft:#5C5F6B;--card:#fff;--paper:#F6F4F0;--radius:12px;
+--cat-eats:#C96A41;--cat-coffee:#B98A2E;--cat-shop:#DB9CAA;--cat-todo:#6F79C2;}
+.app{display:grid;grid-template-columns:380px 1fr;grid-template-rows:auto 1fr;height:100vh;}
+header{grid-column:1/-1;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:20px 24px 14px;border-bottom:1px solid var(--line);background:var(--paper);flex-wrap:wrap;}
+.brand-block{display:flex;flex-direction:column;gap:5px;}
+.nav-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:2px;}
+.nav-tab{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink-soft);cursor:pointer;font-family:inherit;transition:all .15s;}
+.nav-tab.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.nav-tab.info-tab{border-style:dashed;}
+.brand h1{font-weight:700;font-size:32px;line-height:1;letter-spacing:-.01em;text-transform:uppercase;display:flex;align-items:center;gap:10px;}
+.plane-icon{flex-shrink:0;transform:rotate(-20deg);margin-top:-2px;}
+.brand .tag{font-size:12.5px;font-weight:400;color:var(--ink-soft);letter-spacing:.03em;margin-top:3px;text-transform:uppercase;}
+.stats{font-size:12px;color:var(--ink-soft);white-space:nowrap;padding-bottom:4px;}
+.stats b{color:var(--accent);font-weight:600;}
+.sidebar{border-right:1px solid var(--line);background:var(--paper);display:flex;flex-direction:column;min-height:0;}
+.controls{padding:14px 16px 10px;border-bottom:1px solid var(--line);}
+.search{width:100%;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-family:inherit;font-size:13px;color:var(--ink);outline:none;}
+.search:focus{border-color:var(--accent);}
+.filter-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;align-items:center;}
+.chip{font-size:10.5px;letter-spacing:.02em;padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer;user-select:none;transition:all .15s;font-family:inherit;}
+.chip.active{color:#fff;border-color:transparent;}
+.chip[data-cat="Eats"].active{background:var(--cat-eats);}
+.chip[data-cat="Coffee"].active{background:var(--cat-coffee);}
+.chip[data-cat="Shopping"].active{background:var(--cat-shop);}
+.chip[data-cat="Things to do"].active{background:var(--cat-todo);}
+.chip[data-cat="all"].active{background:var(--ink);}
+.chip-sep{width:1px;height:16px;background:var(--line);margin:0 4px;}
+.chip.star-chip{font-size:13px;padding:4px 9px;}
+.list{overflow-y:auto;padding:6px 12px 24px;flex:1;}
+.group-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;padding:12px 6px 5px;font-weight:600;}
+.group-label[data-cat="Eats"]{color:var(--cat-eats);}
+.group-label[data-cat="Coffee"]{color:var(--cat-coffee);}
+.group-label[data-cat="Shopping"]{color:var(--cat-shop);}
+.group-label[data-cat="Things to do"]{color:var(--cat-todo);}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:11px 13px;margin:5px 0;cursor:pointer;transition:transform .12s,box-shadow .12s,border-color .12s;position:relative;}
+.card:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(30,32,39,.07);border-color:#D4CDBE;}
+.card.selected{border-color:var(--ink);box-shadow:0 5px 16px rgba(30,32,39,.1);}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
+.card-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.cat-tag{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
+.cat-tag[data-cat="Eats"]{color:var(--cat-eats);}
+.cat-tag[data-cat="Coffee"]{color:var(--cat-coffee);}
+.cat-tag[data-cat="Shopping"]{color:var(--cat-shop);}
+.cat-tag[data-cat="Things to do"]{color:var(--cat-todo);}
+.visited-badge{font-size:9px;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:999px;background:#E8F5E2;color:#4A7C3F;font-weight:500;}
+.card-actions-row{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.star-btn,.visit-btn{background:none;border:none;cursor:pointer;font-size:16px;padding:2px;opacity:.3;transition:opacity .15s;font-family:inherit;}
+.star-btn:hover,.visit-btn:hover{opacity:.7;}
+.star-btn.active{opacity:1;color:#B98A2E;}
+.visit-btn.active{opacity:1;color:#4A7C3F;}
+.card h3{font-weight:600;font-size:15px;margin:2px 0 3px;}
+.card .addr{font-size:10px;color:#9B9684;letter-spacing:.01em;}
+.card .note-text{font-size:11.5px;color:var(--ink-soft);line-height:1.35;margin-top:3px;}
+.card .user-note{font-size:11px;color:var(--accent);font-style:italic;margin-top:4px;cursor:text;}
+.card-links{margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;}
+.dir-link{font-size:10.5px;text-decoration:none;color:var(--ink-soft);border:1px solid var(--line);padding:4px 8px;border-radius:8px;transition:all .15s;font-family:inherit;}
+.dir-link:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+.note-input{width:100%;margin-top:6px;padding:6px 8px;border:1px dashed var(--line);border-radius:8px;font-family:inherit;font-size:11px;color:var(--ink);background:transparent;outline:none;resize:none;min-height:28px;}
+.note-input:focus{border-color:var(--accent);}
+.note-input::placeholder{color:#C4BFB3;}
+.empty{padding:40px 20px;text-align:center;color:var(--ink-soft);font-size:13px;}
+#map{width:100%;height:100%;}
+.leaflet-popup-content-wrapper{border-radius:12px;background:var(--card);}
+.leaflet-popup-content{font-family:'Space Grotesk',sans-serif;margin:12px 14px;}
+.pop-cat{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
+.pop-title{font-weight:700;font-size:16px;margin:2px 0 4px;}
+.pop-addr{font-size:10.5px;color:#9B9684;margin-bottom:4px;}
+.pop-notes{font-size:12px;color:var(--ink-soft);line-height:1.35;}
+.pop-actions{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;}
+.pop-link{font-size:10.5px;text-decoration:none;color:#fff;background:var(--ink);padding:5px 9px;border-radius:8px;font-family:inherit;transition:background .15s;}
+.pop-link:hover{background:var(--accent);}
+.pop-link.ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
+.pop-link.ghost:hover{background:var(--ink);color:#fff;}
+.my-pin{border-radius:50% 50% 50% 0;transform:rotate(-45deg);width:20px;height:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,.28);border:2px solid #fff;}
+.my-pin span{transform:rotate(45deg);font-size:9px;}
+/* INFO PAGE */
+.info-panel{grid-column:1/-1;overflow-y:auto;padding:40px;max-width:720px;margin:0 auto;display:none;}
+.info-panel.active{display:block;}
+.info-panel h2{font-weight:700;font-size:24px;text-transform:uppercase;margin-bottom:6px;}
+.info-panel .info-sub{font-size:13px;color:var(--ink-soft);margin-bottom:28px;text-transform:uppercase;letter-spacing:.03em;}
+.info-section{margin-bottom:28px;}
+.info-section h3{font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin-bottom:8px;}
+.info-editor{width:100%;min-height:100px;padding:14px;border:1px dashed var(--line);border-radius:var(--radius);font-family:inherit;font-size:13px;line-height:1.5;color:var(--ink);background:var(--card);outline:none;resize:vertical;}
+.info-editor:focus{border-color:var(--accent);}
+.info-editor::placeholder{color:#C4BFB3;}
+.info-hint{font-size:11px;color:#C4BFB3;margin-top:6px;}
+@media(max-width:860px){
+.app{grid-template-columns:1fr;grid-template-rows:auto 38vh 1fr;}
+.sidebar{border-right:none;border-bottom:1px solid var(--line);}
+.brand h1{font-size:24px;}
+.info-panel{padding:24px 16px;}
+}
+::-webkit-scrollbar{width:7px;}
+::-webkit-scrollbar-thumb{background:#D4CDBE;border-radius:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+<header>
+<div class="brand-block">
+<div class="nav-row" id="navRow"></div>
+<div class="brand">
+<h1><svg class="plane-icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>CURATED <span id="cityTitle" style="color:var(--accent)">COPENHAGEN</span></h1>
+<div class="tag">VARSHI'S GUIDE TO CITIES AROUND THE WORLD</div>
+</div>
+</div>
+<div class="stats"><b id="countShown">0</b> of <span id="countTotal">0</span> spots</div>
+</header>
+<div class="sidebar" id="sidebar">
+<div class="controls">
+<input class="search" id="search" type="text" placeholder="Search by name, address, or note..."/>
+<div class="filter-row" id="chips">
+<div class="chip active" data-cat="all">All</div>
+<div class="chip" data-cat="Eats">Eats</div>
+<div class="chip" data-cat="Coffee">Coffee</div>
+<div class="chip" data-cat="Shopping">Shopping</div>
+<div class="chip" data-cat="Things to do">Things to do</div>
+<div class="chip-sep"></div>
+<div class="chip star-chip" data-cat="starred" title="Starred only">&#9733;</div>
+</div>
+</div>
+<div class="list" id="list"></div>
+</div>
+<div id="map"></div>
+<div class="info-panel" id="infoPanel">
+<h2 id="infoTitle">COPENHAGEN INFO</h2>
+<div class="info-sub">Apps, transport, tips, and essentials</div>
+<div class="info-section"><h3>Apps & Transport</h3>
+<textarea class="info-editor" id="infoApps" placeholder="e.g. DSB app for trains, Donkey Republic for bike share, Rejsekort for transit..."></textarea>
+<div class="info-hint">Your edits are saved automatically</div></div>
+<div class="info-section"><h3>Money & Tipping</h3>
+<textarea class="info-editor" id="infoMoney" placeholder="e.g. everything is card, tipping not expected but round up if you want..."></textarea></div>
+<div class="info-section"><h3>Neighborhoods</h3>
+<textarea class="info-editor" id="infoNeighborhoods" placeholder="e.g. Nørrebro = cool kids, Vesterbro = meatpacking + bars, Frederiksberg = leafy calm..."></textarea></div>
+<div class="info-section"><h3>General Tips</h3>
+<textarea class="info-editor" id="infoTips" placeholder="e.g. bike lanes are sacred, restaurants close early on Sunday, book popular spots ahead..."></textarea></div>
+</div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const CITIES={
+copenhagen:{label:"Copenhagen",center:[55.6800,12.5750],zoom:13,accent:"#6F79C2",places:[{"category": "Eats", "name": "Rødder & Vin Bar", "lat": 55.6882502, "lng": 12.5618155, "address": "Ravnsborggade 8, 2200 København", "notes": "Wine bar"}, {"category": "Eats", "name": "Studio Kitchen", "lat": 55.6846875, "lng": 12.5835836, "address": "Dronningens Tværgade 52, 1302 København", "notes": "Get the eggs!! (Studio X Kitchen)"}, {"category": "Eats", "name": "Delfine", "lat": 55.6725121, "lng": 12.5558178, "address": "Vesterbrogade 40, 1620 København", "notes": "Spelled Delphine on Google"}, {"category": "Eats", "name": "Sputino", "lat": 55.672798, "lng": 12.552133, "address": "Vesterbrogade 68, 1620 København", "notes": "Matched to Restaurant Spuntino"}, {"category": "Eats", "name": "Cantina", "lat": 55.6823503, "lng": 12.5842569, "address": "Borgergade 2, 1300 København", "notes": ""}, {"category": "Eats", "name": "Pico Pizza", "lat": 55.6872261, "lng": 12.5494307, "address": "Skyttegade 3, 2200 København", "notes": "Nørrebro location"}, {"category": "Eats", "name": "Slurp Ramen", "lat": 55.685126, "lng": 12.567208, "address": "Nansensgade 90, 1366 København", "notes": ""}, {"category": "Eats", "name": "Buka Bakery", "lat": 55.6819717, "lng": 12.5858709, "address": "Store Kongensgade 18, 1264 København", "notes": "Get the cardamom bun"}, {"category": "Eats", "name": "Reffen / Food trucks", "lat": 55.6936333, "lng": 12.6082318, "address": "Refshalevej 167, 1432 København", "notes": "One of recommender's favorites"}, {"category": "Eats", "name": "Juno the Bakery", "lat": 55.7061815, "lng": 12.5818152, "address": "Århusgade 48, 2100 København", "notes": "Best bakery, per recommender"}, {"category": "Eats", "name": "Poulette", "lat": 55.6904923, "lng": 12.5552853, "address": "Møllegade 1, 2200 København", "notes": "Chicken sandwich, Dua Lipa approved"}, {"category": "Eats", "name": "Pompette Wine Bar", "lat": 55.690513, "lng": 12.5553376, "address": "Møllegade 3, 2200 København", "notes": ""}, {"category": "Eats", "name": "Surt", "lat": 55.6651431, "lng": 12.533293, "address": "Fadet 35, 1799 København", "notes": "Carlsberg Byen"}, {"category": "Eats", "name": "Resto Bar", "lat": 55.6717869, "lng": 12.5550995, "address": "Vesterbrogade 51, 1620 København", "notes": ""}, {"category": "Eats", "name": "Judie", "lat": 55.6796758, "lng": 12.5906338, "address": "Nyhavn 26, 1051 København K", "notes": "Smørrebrød, Nyhavn"}, {"category": "Eats", "name": "Broens Street Food", "lat": 55.6778772, "lng": 12.5968088, "address": "Strandgade 95, 1401 København", "notes": ""}, {"category": "Eats", "name": "Esmée", "lat": 55.6797, "lng": 12.5878, "address": "Kongens Nytorv 8, 1050 København", "notes": "Mediterranean"}, {"category": "Eats", "name": "Popl Burger", "lat": 55.6727, "lng": 12.5913, "address": "Strandgade 108, 1401 København", "notes": ""}, {"category": "Eats", "name": "Restaurant Barr", "lat": 55.673, "lng": 12.5907, "address": "Strandgade 93, 1401 København", "notes": "Nordic"}, {"category": "Eats", "name": "BAEST Pizza", "lat": 55.6925, "lng": 12.5538, "address": "Guldbergsgade 29, 2200 København", "notes": ""}, {"category": "Eats", "name": "Hans (Kong Hans Kælder)", "lat": 55.68, "lng": 12.5848, "address": "Vingårdstræde 6, 1070 København", "notes": "Fine dining"}, {"category": "Eats", "name": "Pico Copenhagen", "lat": 55.706, "lng": 12.576, "address": "Østerbrogade 98, 2100 København", "notes": "Distinct from Pico Pizza"}, {"category": "Eats", "name": "Bar Vitrine", "lat": 55.6816, "lng": 12.579, "address": "Møntergade 5, 1116 København", "notes": ""}, {"category": "Coffee", "name": "Apotek 57", "lat": 55.6869872, "lng": 12.5857865, "address": "Fredericiagade 57, 1310 København", "notes": ""}, {"category": "Coffee", "name": "Esso", "lat": 55.6619531, "lng": 12.5193198, "address": "Vigerslev Allé 36, 2500 København", "notes": ""}, {"category": "Coffee", "name": "012 Coffee & Eatery", "lat": 55.6901459, "lng": 12.5753445, "address": "Øster Farimagsgade 12b, 2100 København", "notes": ""}, {"category": "Coffee", "name": "O12 Coffee & Eatery", "lat": 55.6804, "lng": 12.5777, "address": "Silkegade 1, 1113 København", "notes": "Possible second location"}, {"category": "Coffee", "name": "Sonny", "lat": 55.6769645, "lng": 12.5742551, "address": "Rådhusstræde 5, 1466 København", "notes": ""}, {"category": "Coffee", "name": "La Cabra", "lat": 55.6815858, "lng": 12.5790398, "address": "Møntergade 3A, 1116 København", "notes": ""}, {"category": "Coffee", "name": "Lille Bakery", "lat": 55.6900548, "lng": 12.6133271, "address": "Refshalevej 213B, 1432 København", "notes": "Near Reffen"}, {"category": "Coffee", "name": "Atelier September", "lat": 55.6873916, "lng": 12.5849268, "address": "Kronprinsessegade 62, 1306 København", "notes": ""}, {"category": "Coffee", "name": "Hart Bageri", "lat": 55.6683338, "lng": 12.5579368, "address": "Høkerboderne 17, 1712 København", "notes": "Cardamom bun, near Central Station"}, {"category": "Coffee", "name": "The Pack House", "lat": 55.6725207, "lng": 12.5903114, "address": "Overgaden Neden Vandet 19A, 1414 København", "notes": "Christianshavn canal-side"}, {"category": "Coffee", "name": "Original Coffee", "lat": 55.679475, "lng": 12.5806323, "address": "Østergade 52 (ILLUM, 4th fl.), 1001 København K", "notes": "Rooftop"}, {"category": "Coffee", "name": "Lido", "lat": 55.6723031, "lng": 12.5770732, "address": "Vester Voldgade 104, 1552 København", "notes": ""}, {"category": "Coffee", "name": "Andersen & Maillard", "lat": 55.6903659, "lng": 12.5551042, "address": "Nørrebrogade 62, 2200 København", "notes": ""}, {"category": "Coffee", "name": "Bottega Barlie", "lat": 55.6872162, "lng": 12.5856339, "address": "Fredericiagade 78, 1310 København", "notes": ""}, {"category": "Coffee", "name": "Coffee Collective", "lat": 55.6800711, "lng": 12.5825417, "address": "Kristen Bernikows Gade 2, 1105 København", "notes": ""}, {"category": "Coffee", "name": "Cafe Kismet", "lat": 55.6822, "lng": 12.5852, "address": "Adelgade 16, 1304 København", "notes": ""}, {"category": "Coffee", "name": "Komuna Coffee", "lat": 55.6868, "lng": 12.5917, "address": "Bredgade 73, 1260 København", "notes": ""}, {"category": "Coffee", "name": "Bonni", "lat": 55.6926, "lng": 12.556, "address": "Fensmarkgade 23, 2200 København", "notes": ""}, {"category": "Coffee", "name": "Lagoni & Co.", "lat": 55.6989, "lng": 12.566, "address": "Ryesgade 76, 2100 København", "notes": ""}, {"category": "Coffee", "name": "BAFI", "lat": 55.6938, "lng": 12.554, "address": "Rantzausgade 42, 2200 København", "notes": "Flower & vintage furniture shop"}, {"category": "Coffee", "name": "Flan — Arts & Coffee", "lat": 55.6688, "lng": 12.556, "address": "Viktoriagade 6, 1655 København", "notes": "Art & design store"}, {"category": "Coffee", "name": "Wild Horses", "lat": 55.6916, "lng": 12.5021, "address": "Borgbjergsvej 1, tv, 2450 København", "notes": ""}, {"category": "Coffee", "name": "Hart Bakery (Islands Brygge)", "lat": 55.6635, "lng": 12.579, "address": "Islands Brygge 23, 2300 København", "notes": "Distinct from Hart Bageri"}, {"category": "Shopping", "name": "Collectors Cage", "lat": 55.6785068, "lng": 12.5765853, "address": "Amagertorv 31, 1160 København", "notes": "Designer vintage bags"}, {"category": "Shopping", "name": "Studio Arhoj", "lat": 55.6805799, "lng": 12.5758027, "address": "Skindergade 7, 1159 København", "notes": "Ceramics studio"}, {"category": "Shopping", "name": "Arket", "lat": 55.6804485, "lng": 12.5780925, "address": "Købmagergade 33, 1150 København", "notes": ""}, {"category": "Shopping", "name": "Hay", "lat": 55.6789792, "lng": 12.580129, "address": "Østergade 61, 1100 København", "notes": ""}, {"category": "Shopping", "name": "Boii Studios", "lat": 55.6806343, "lng": 12.5788653, "address": "Kronprinsensgade 5, 1114 København", "notes": ""}, {"category": "Shopping", "name": "Sui Ava", "lat": 55.6810275, "lng": 12.5822165, "address": "Grønnegade 1, 1107 København", "notes": "Hair clips, jewelry"}, {"category": "Shopping", "name": "Lie Studio", "lat": 55.6823371, "lng": 12.578582, "address": "Vognmagergade 9, 1120 København", "notes": "Jewelry"}, {"category": "Shopping", "name": "Stine Goya", "lat": 55.6826686, "lng": 12.5810268, "address": "Gothersgade 58, 1123 København", "notes": ""}, {"category": "Shopping", "name": "Skall", "lat": 55.6812673, "lng": 12.5891225, "address": "Store Strandstræde 21, 1255 København", "notes": ""}, {"category": "Shopping", "name": "Magnolias", "lat": 55.6793689, "lng": 12.5793726, "address": "Købmagergade 5, 1150 København", "notes": "Secondhand / designer resale"}, {"category": "Shopping", "name": "Times Up Vintage", "lat": 55.6812902, "lng": 12.5746119, "address": "Krystalgade 4, 1172 København", "notes": ""}, {"category": "Shopping", "name": "2nd Rag", "lat": 55.674716, "lng": 12.5485788, "address": "Gl. Kongevej 91A, 1850 Frederiksberg", "notes": ""}, {"category": "Shopping", "name": "Palette 26", "lat": 55.6779806, "lng": 12.5768755, "address": "Hyskenstræde 9, 1207 København", "notes": "Gift shop / secondhand"}, {"category": "Shopping", "name": "French Vintage", "lat": 55.685, "lng": 12.555, "address": "—", "notes": "No confident address match found"}, {"category": "Shopping", "name": "Strøget Street", "lat": 55.6781635, "lng": 12.573362, "address": "Strøget, 1164 København", "notes": "Main shopping street"}, {"category": "Shopping", "name": "Jacobsen Plus", "lat": 55.6785967, "lng": 12.5750776, "address": "Vimmelskaftet 43, 1161 København", "notes": ""}, {"category": "Shopping", "name": "Flea Markets (B&W Market)", "lat": 55.6927777, "lng": 12.6126117, "address": "Refshalevej 171, 1432 København", "notes": ""}, {"category": "Shopping", "name": "Ganni", "lat": 55.6798, "lng": 12.584, "address": "Bremerholm 4, 1069 København", "notes": ""}, {"category": "Shopping", "name": "Keiko", "lat": 55.6906, "lng": 12.55, "address": "Nørrebrogade 32D, 2200 København", "notes": "Clothing / vintage"}, {"category": "Shopping", "name": "Decades", "lat": 55.6788, "lng": 12.5707, "address": "Larsbjørnsstræde 16, 1454 København", "notes": "Vintage"}, {"category": "Shopping", "name": "Crush Vintage (CRU$H)", "lat": 55.69, "lng": 12.5524, "address": "Nørrebrogade 5, 2200 København", "notes": "Vintage"}, {"category": "Shopping", "name": "Uff Humana", "lat": 55.6722, "lng": 12.5563, "address": "Vesterbrogade 50, 1620 København", "notes": "Secondhand"}, {"category": "Shopping", "name": "Chamoi", "lat": 55.6884, "lng": 12.5589, "address": "Elmegade 2, 2200 København", "notes": "Vintage"}, {"category": "Shopping", "name": "Wilén Studio", "lat": 55.6779, "lng": 12.577, "address": "Hyskenstræde 16, 1207 København", "notes": ""}, {"category": "Shopping", "name": "AMAV II Secondhand", "lat": 55.6776, "lng": 12.5743, "address": "Kompagnistræde 24, 1208 København", "notes": "Secondhand"}, {"category": "Shopping", "name": "Norr", "lat": 55.6816, "lng": 12.578, "address": "Pilestræde 36, 1112 København", "notes": ""}, {"category": "Shopping", "name": "NakedStore", "lat": 55.6816, "lng": 12.5825, "address": "Regnegade 2, 1110 København", "notes": "Shoes"}, {"category": "Shopping", "name": "Norse Projects", "lat": 55.6807, "lng": 12.5786, "address": "Kronprinsensgade 3, 1114 København", "notes": ""}, {"category": "Shopping", "name": "Alohas", "lat": 55.6807, "lng": 12.5788, "address": "Kronprinsensgade 10, 1114 København", "notes": "Shoes"}, {"category": "Shopping", "name": "Pitaya", "lat": 55.6807, "lng": 12.5789, "address": "Kronprinsensgade 11, 1114 København", "notes": ""}, {"category": "Things to do", "name": "Reffen", "lat": 55.6936333, "lng": 12.6082318, "address": "Refshalevej 167, 1432 København", "notes": "One of recommender's favorite things they did"}, {"category": "Things to do", "name": "Nyhavn", "lat": 55.679776, "lng": 12.5913041, "address": "Nyhavn, Indre By, København", "notes": ""}, {"category": "Things to do", "name": "Swim + sauna at Nordhavn", "lat": 55.7066911, "lng": 12.5975499, "address": "Sandkaj 27, 2150 København", "notes": "Weather permitting"}, {"category": "Things to do", "name": "Rosenborg Castle", "lat": 55.6858274, "lng": 12.5772687, "address": "Øster Voldgade 4A, 1350 København", "notes": ""}, {"category": "Things to do", "name": "Grab a drink along the water", "lat": 55.6733556, "lng": 12.5886077, "address": "Strandgade 7, 1401 København", "notes": "Example: ROOF Bar & Lounge"}, {"category": "Things to do", "name": "Book a canal tour", "lat": 55.6805274, "lng": 12.587945, "address": "Nyhavn 3, 1051 København", "notes": "Strömma departure point"}, {"category": "Things to do", "name": "Bike around the city", "lat": 55.6699746, "lng": 12.5707696, "address": "Use Donkey Republic (app-based bike share)", "notes": "Pick up from nearest hub via app"}, {"category": "Things to do", "name": "Stroll around Christianshavn", "lat": 55.6736581, "lng": 12.5892028, "address": "Christianshavn, København", "notes": ""}, {"category": "Things to do", "name": "Tivoli Gardens", "lat": 55.6736629, "lng": 12.5682338, "address": "Vesterbrogade 3, 1630 København V", "notes": "If you like amusement parks"}, {"category": "Things to do", "name": "Glyptoteket Art Museum", "lat": 55.67298, "lng": 12.572543, "address": "Dantes Plads 7, 1556 København", "notes": ""}, {"category": "Things to do", "name": "Frederiksberg Gardens", "lat": 55.6748106, "lng": 12.5254766, "address": "2000 Frederiksberg", "notes": ""}, {"category": "Things to do", "name": "Christiansborg Palace", "lat": 55.6763218, "lng": 12.5803274, "address": "Prins Jørgens Gård 5, 1218 København", "notes": ""}, {"category": "Things to do", "name": "Amalienborg Palace", "lat": 55.6840588, "lng": 12.5930201, "address": "Amalienborg Slotsplads, 1257 København K", "notes": ""}, {"category": "Things to do", "name": "Shop down Strøget Street", "lat": 55.6781635, "lng": 12.573362, "address": "Strøget, 1164 København", "notes": ""}, {"category": "Things to do", "name": "Islands Brygge Harbour Bath", "lat": 55.668596, "lng": 12.5776194, "address": "Islands Brygge 14, 2300 København S", "notes": ""}, {"category": "Things to do", "name": "The Round Tower & observatory", "lat": 55.681347, "lng": 12.57573, "address": "Købmagergade 52A, 1150 København", "notes": ""}, {"category": "Eats", "name": "1105", "lat": 55.681673, "lng": 12.5743, "address": "Kristen Bernikows Gade 4, 1105 Copenhagen", "notes": "Chic, London-inspired cocktail bar. Minimalist Scandi decor, soft lighting, great Bramble cocktail."}, {"category": "Eats", "name": "Apéro", "lat": 55.6773, "lng": 12.576679, "address": "Hestemøllestræde 2, 1464 Copenhagen", "notes": "300-year-old half-timber building in the inner city. Cozy nooks, creaky floors, classic cocktails. Not for large groups."}, {"category": "Things to do", "name": "Circle Bridge", "lat": 55.682838, "lng": 12.58212, "address": "Christianshavn, 1411 Copenhagen", "notes": "Swings open sideways to let boats through. Zig-zagged path designed for self-reflection."}, {"category": "Eats", "name": "Juju", "lat": 55.684706, "lng": 12.575043, "address": "Gothersgade 13, 1123 Copenhagen", "notes": "Casual Korean from a Noma alum. Banchan, fried chicken, sesame ice cream. Near Rosenborg Castle."}, {"category": "Eats", "name": "Koan", "lat": 55.679063, "lng": 12.574358, "address": "Kongens Nytorv 5, 1050 Copenhagen", "notes": "Hottest spot in the city right now. Danish-Korean fusion tasting menu from Noma alum Kristian Baumann. Book well ahead."}, {"category": "Things to do", "name": "North Atlantic House", "lat": 55.676624, "lng": 12.580064, "address": "Strandgade 91, 1401 Copenhagen", "notes": "Small museum on Denmark's colonial past with Greenland and the Faroe Islands."}, {"category": "Eats", "name": "Peders CPH", "lat": 55.674318, "lng": 12.576386, "address": "Larsbjørnsstræde 14, 1454 Copenhagen", "notes": "No-signage craft beer basement bar in the Latin Quarter. Ever-changing lineup of small-brewery beers. Free cake on Sundays."}, {"category": "Eats", "name": "Rosforth & Rosforth", "lat": 55.681799, "lng": 12.580539, "address": "Knippelsbrogade 5, 1411 Copenhagen", "notes": "Natural wine and open sandwiches under a bridge by the canal. Casual and cheap by Copenhagen standards."}, {"category": "Eats", "name": "Ruby", "lat": 55.676645, "lng": 12.581071, "address": "Nybrogade 10, 1203 Copenhagen", "notes": "Copenhagen institution in a historic townhouse off Gammel Strand. Try the Butt Naked Old Fashioned. Seasonal cocktail specials."}, {"category": "Eats", "name": "Selma", "lat": 55.683713, "lng": 12.574078, "address": "Classensgade 18, 2100 Copenhagen", "notes": "Best smørrebrød in town per locals. Michelin Bib Gourmand. Try the blackcurrant herring. 5-7 course curated menus available."}, {"category": "Eats", "name": "Smørrebrød & kanelsnegle", "lat": 55.68367, "lng": 12.582378, "address": "Citywide, Copenhagen", "notes": "Open-faced sandwiches and cinnamon buns are essential Copenhagen eating. Find at any cafe."}, {"category": "Eats", "name": "Tata Bar at Hotel Sanders", "lat": 55.678083, "lng": 12.575866, "address": "Tordenskjoldsgade 15, 1055 Copenhagen", "notes": "Award-winning cocktail bar with mid-century Orient Express-style interiors. A classy end to an evening, near the Royal Danish Theatre."}, {"category": "Eats", "name": "The Library Bar", "lat": 55.685487, "lng": 12.578039, "address": "Bernstorffsgade 4, 1577 Copenhagen", "notes": "Old-school jazz bar inside Copenhagen Plaza hotel near Central Station. Chesterfield armchairs, live jazz, cigars."}, {"category": "Things to do", "name": "The Piss Trench", "lat": 55.675113, "lng": 12.575161, "address": "Studiestræde, 1554 Copenhagen", "notes": "Gentrified alley snaking through the Latin Quarter - once home to brothels and sleazy bars, now lined with colorful old architecture, cafes, and indie shops."}, {"category": "Eats", "name": "Vækst", "lat": 55.68417, "lng": 12.581245, "address": "Sankt Peders Stræde 34, 1453 Copenhagen", "notes": "Nordic vegetables-forward menu inside a stunning two-story greenhouse in the Latin Quarter. Vegetarian dishes highlighted on the menu."}, {"category": "Eats", "name": "Donda Deli", "lat": 55.676686, "lng": 12.591757, "address": "Prinsessegade 55, 1422 Copenhagen", "notes": "Latin American small plates and natural wines. Cozy pink-walled vibe in Christianshavn."}, {"category": "Things to do", "name": "Kissing Bridge", "lat": 55.673435, "lng": 12.594677, "address": "Bryggebroen, 2300 Copenhagen", "notes": "Took 7 years to build - the two halves kiss in the middle. Busiest bike bridge in the city."}, {"category": "Things to do", "name": "Krøyers Plads", "lat": 55.671542, "lng": 12.589624, "address": "Krøyers Plads, 1439 Copenhagen", "notes": "Waterfront square in Christianshavn continuing the historic warehouse structure. Wood deck for lounging and sea swimming. Broens Gadekøkken food market right next door."}, {"category": "Things to do", "name": "Sidewalk trampolines", "lat": 55.676953, "lng": 12.590422, "address": "Islands Brygge, 2300 Copenhagen", "notes": "Four tiny trampolines built into the harbor sidewalk near the Kissing Bridge."}, {"category": "Things to do", "name": "Cisterns underground gallery", "lat": 55.67434, "lng": 12.556928, "address": "Søndermarken 1, 2000 Frederiksberg", "notes": "Old water cisterns converted into an art gallery. 100% humidity, always cold, often flooded floors."}, {"category": "Things to do", "name": "Copenhill ski slope", "lat": 55.672455, "lng": 12.55055, "address": "Vindmøllevej 6, 2300 Copenhagen", "notes": "Ski down a rooftop power plant on artificial turf. Apres ski bar at the top."}, {"category": "Eats", "name": "Curfew", "lat": 55.666735, "lng": 12.553473, "address": "Vesterbrogade 69, 1620 Copenhagen", "notes": "1920s speakeasy entered through a bookcase doorway. Book well ahead - seats go fast. Great date night spot."}, {"category": "Eats", "name": "Hanzo", "lat": 55.664958, "lng": 12.552793, "address": "Værnedamsvej 9, 1619 Copenhagen", "notes": "Asian-European fusion on Værnedamsvej - Copenhagen's Paris street. Sharing plates, bao, dumplings, tempura."}, {"category": "Eats", "name": "Höst", "lat": 55.665212, "lng": 12.553336, "address": "Nørre Farimagsgade 41, 1364 Copenhagen", "notes": "Nordic tasting menus (3 or 5 course) focused on seasonal vegetables. Award-winning interior."}, {"category": "Eats", "name": "Köd", "lat": 55.671628, "lng": 12.554378, "address": "Vesterbrogade 18, 1620 Copenhagen", "notes": "Steakhouse on Vesterbrogade with an unlimited cuts concept for groups. Great wine list."}, {"category": "Eats", "name": "Kødbyens Fiskebar", "lat": 55.668442, "lng": 12.552514, "address": "Flæsketorvet 100, 1711 Copenhagen", "notes": "Celebrated seafood restaurant in the Meatpacking District. Oysters and crayfish are the standouts."}, {"category": "Eats", "name": "Lidkoeb", "lat": 55.667204, "lng": 12.56124, "address": "Vesterbrogade 72B, 1620 Copenhagen", "notes": "Three-story bar in an old apothecary in Vesterbro. Cozy fireplace nooks, whiskey bars, and great aquavit cocktails."}, {"category": "Eats", "name": "Mikkeller HQ", "lat": 55.671776, "lng": 12.55731, "address": "Skelbækgade 29, 1717 Copenhagen", "notes": "Iconic Copenhagen craft brewery's HQ bar on Skelbækgade - bodega-style hangout with rotating taps. Also check out nearby Warpigs brewpub."}, {"category": "Eats", "name": "Noho", "lat": 55.666054, "lng": 12.55875, "address": "Flæsketorvet 41, 1711 Copenhagen", "notes": "Buzzy Meatpacking District bar popular with creative types. Neon signs, pink floral ceiling, Nordic Mules."}, {"category": "Eats", "name": "Prolog Coffee", "lat": 55.665961, "lng": 12.554553, "address": "Høkerboderne 16, 1712 Copenhagen", "notes": "Specialty coffee roaster in the Meatpacking District. One of the few places in Copenhagen that sells indie magazines. Good Sunday spot."}, {"category": "Eats", "name": "Warpigs Brewpub", "lat": 55.675874, "lng": 12.55768, "address": "Flæsketorvet 25-37, 1711 Copenhagen", "notes": "State-of-the-art brewery in the Meatpacking District with burgers. Right next to Mikkeller HQ."}, {"category": "Eats", "name": "Andra", "lat": 55.690683, "lng": 12.557215, "address": "Stefansgade 58, 2200 Copenhagen", "notes": "Cozy natural wine bar and eatery on Stefansgade in Nørrebro. Small plates rooted in southern European cooking. Run by a sommelier."}, {"category": "Eats", "name": "Balderdash", "lat": 55.694114, "lng": 12.558312, "address": "Teglgårdsstræde 10, 1452 Copenhagen", "notes": "Wildly inventive cocktail bar hidden behind an unassuming white exterior. Eccentric menu, very hygge atmosphere."}, {"category": "Things to do", "name": "Det Grønne Loppemarked", "lat": 55.686749, "lng": 12.549385, "address": "Assistens Kirkegård, Nørrebrogade, 2200 Copenhagen", "notes": "The Green Flea Market in Nørrebro on Sundays from 10am. Secondhand clothes, vintage lamps, plant-based food stands. Very local vibe."}, {"category": "Eats", "name": "Dzidra", "lat": 55.687785, "lng": 12.552213, "address": "Blågårdsgade 13, 2200 Copenhagen", "notes": "Homely cafe on a quiet Nørrebro residential street. Regularly changing menu leaning Greek or Italian, great cakes and La Cabra coffee."}, {"category": "Eats", "name": "Friheden", "lat": 55.686532, "lng": 12.560315, "address": "Nørrebrogade 50, 2200 Copenhagen", "notes": "Bar and cafe in the heart of Nørrebro by the skatepark. Specialty coffee and natural wines indoors and out."}, {"category": "Eats", "name": "Goldfinch", "lat": 55.694516, "lng": 12.552776, "address": "Elmegade 21, 2200 Copenhagen", "notes": "Cantonese in a date-night setting. Traditional and modern dishes from a former Geranium head chef. Call ahead re vegetarian options."}, {"category": "Eats", "name": "Grød", "lat": 55.691865, "lng": 12.553748, "address": "Jægersborggade 50, 2200 Copenhagen", "notes": "Entire menu built around porridge - sounds odd, genuinely great. Flagship in Nørrebro, 8 branches around the city."}, {"category": "Shopping", "name": "Gågrøn", "lat": 55.694975, "lng": 12.554506, "address": "Jægersborggade 43, 2200 Copenhagen", "notes": "Eco-conscious homewares and beauty on Jægersborggade in Nørrebro."}, {"category": "Eats", "name": "Jatak", "lat": 55.687179, "lng": 12.55196, "address": "Jægersborggade 41, 2200 Copenhagen", "notes": "Asian-influenced 12-course tasting menu. Sit at the kitchen counter. Book well ahead."}, {"category": "Eats", "name": "Kiin Kiin", "lat": 55.690736, "lng": 12.552153, "address": "Guldbergsgade 21, 2200 Copenhagen", "notes": "Only Thai restaurant in Denmark with a Michelin star, held for 10+ years. Closed all of July while chefs travel to Thailand."}, {"category": "Eats", "name": "Sankt Peders Bageri", "lat": 55.691015, "lng": 12.559774, "address": "Larslejsstræde 7, 1451 Copenhagen", "notes": "One of the oldest and most cherished bakeries in town. Cinnamon rolls are heavenly."}, {"category": "Eats", "name": "Steffi", "lat": 55.688793, "lng": 12.551632, "address": "Stefansgade 35, 2200 Copenhagen", "notes": "Natural wine shop - grab a glass and head to Nørrebroparken."}, {"category": "Eats", "name": "Café Intime", "lat": 55.68097, "lng": 12.530114, "address": "Allégade 25, 2000 Frederiksberg", "notes": "100-year-old jazz bar in Frederiksberg with stained glass windows and a grand piano. LGBTQ+ friendly institution."}, {"category": "Shopping", "name": "Gammel Kongevej", "lat": 55.670091, "lng": 12.524565, "address": "Gammel Kongevej, 1850 Frederiksberg", "notes": "One of Copenhagen's most charming streets through Frederiksberg - great for a wander, lined with cafes, independent shops, and beautiful architecture."}, {"category": "Eats", "name": "Gensyn Bar", "lat": 55.670316, "lng": 12.531529, "address": "Frederiksberg Allé 24, 1820 Frederiksberg", "notes": "No-frills Frederiksberg bar run by a veteran mixologist. Quality cocktails without the high-end price tag."}, {"category": "Things to do", "name": "Copenhot", "lat": 55.708505, "lng": 12.589066, "address": "Sundkaj 14, 2150 Nordhavn", "notes": "Waterfront sauna with wood hot tubs and sea views in Nordhavn. Try the floating glass sauna."}, {"category": "Eats", "name": "Kōnā", "lat": 55.699762, "lng": 12.588579, "address": "Pasteursvej 14, 1799 Copenhagen", "notes": "Japanese izakaya in Carlsberg Byen. Go downstairs for the special ramen counter."}, {"category": "Things to do", "name": "Copenhagen Contemporary", "lat": 55.695953, "lng": 12.610349, "address": "Refshalevej 173A, 1432 Copenhagen", "notes": "International art center in a former welding hall in Refshaleøen. Works by James Turrell and Yoko Ono plus emerging talent."}, {"category": "Things to do", "name": "GoBoat harbor rental", "lat": 55.695653, "lng": 12.614329, "address": "Islands Brygge 10, 2300 Copenhagen", "notes": "Rent a small electric picnic boat and cruise the Copenhagen harbor at your own pace."}, {"category": "Things to do", "name": "GreenKayak canal cleanup", "lat": 55.684138, "lng": 12.612649, "address": "Christianshavn, 1401 Copenhagen", "notes": "Free kayak trip in exchange for collecting rubbish from the canals. Book ahead as it gets fully booked in summer."}, {"category": "Eats", "name": "Harbor coffee carts", "lat": 55.692181, "lng": 12.610444, "address": "Various harbor locations, Copenhagen", "notes": "Espresso carts parked at harbor viewpoints. Sit on a bench and sip like a local."}, {"category": "Eats", "name": "La Banchina", "lat": 55.687202, "lng": 12.611692, "address": "Refshalevej 141, 1432 Copenhagen", "notes": "Harbour sauna, farm-to-table food, and drinks. Great people-watching. Swim in the harbour right next door."}, {"category": "Eats", "name": "Aamanns Genbo", "lat": 55.675339, "lng": 12.569217, "address": "Øster Farimagsgade 10, 2100 Copenhagen", "notes": "Creative take on smørrebrød and pickled herring. Chef-recommended - try the seafood tasting three ways."}, {"category": "Eats", "name": "Alice", "lat": 55.679445, "lng": 12.575446, "address": "Amagerbrogade 61, 2300 Copenhagen", "notes": "Local secret in Amagerbro. Daily-changing pastries, focaccia sandwiches, and hand-churned ice creams. Try the kouign-amann."}, {"category": "Eats", "name": "Bar Amore", "lat": 55.68451, "lng": 12.567161, "address": "Pile Allé 14, 2000 Frederiksberg", "notes": "Italian small plates and fresh pasta near Frederiksberg. Simple seasonal ingredients - pasta dishes are naturally vegetarian-friendly."}, {"category": "Things to do", "name": "Botanical Gardens", "lat": 55.680007, "lng": 12.566144, "address": "Gothersgade 128, 1123 Copenhagen", "notes": "A green oasis in central Copenhagen with rare cacti and plants from around the world."}, {"category": "Things to do", "name": "Carlsberg Brewery", "lat": 55.684952, "lng": 12.574446, "address": "Gamle Carlsberg Vej 11, 1799 Copenhagen", "notes": "Brewery tour and lunch. Don't miss the elephant gate statues with historic pre-WWII swastika carvings."}, {"category": "Things to do", "name": "Climate change bench", "lat": 55.677581, "lng": 12.571667, "address": "Langelinie, 2100 Copenhagen", "notes": "A bench 1 meter off the ground - the projected sea level rise by 2100. Requires a pull-up to climb on."}, {"category": "Things to do", "name": "Copenpay program", "lat": 55.681308, "lng": 12.565834, "address": "Citywide, Copenhagen", "notes": "City-wide initiative rewarding eco-conscious behavior with free museum entries, bike rentals, meals, and more. No app needed - just show proof of qualifying activity. Runs June-August."}, {"category": "Eats", "name": "Delphine", "lat": 55.68315, "lng": 12.570473, "address": "Holmbladsgade 113, 2300 Copenhagen", "notes": "Greek-inspired small plates - watermelon feta salad and vegetable-forward sharing dishes. Call ahead to confirm options."}, {"category": "Things to do", "name": "Design Museum Danmark", "lat": 55.683344, "lng": 12.570364, "address": "Bredgade 68, 1260 Copenhagen", "notes": "Traces Danish design history interactively. Ends with a giant slide. Open Tue-Sun, 140 DKK adults."}, {"category": "Shopping", "name": "Illums Bolighus", "lat": 55.674007, "lng": 12.56789, "address": "Amagertorv 10, 1160 Copenhagen", "notes": "Enormous Danish design department store on Strøget. Like being in a design museum except you can buy everything."}, {"category": "Eats", "name": "Jade", "lat": 55.674234, "lng": 12.575149, "address": "Stormgade 13, 1555 Copenhagen", "notes": "Asian-fusion on Stormgade. Strong vegetable dishes like steamed snake beans and udon cacio e pepe. Call ahead."}, {"category": "Eats", "name": "Kafeteria SMK", "lat": 55.684545, "lng": 12.57398, "address": "Sølvgade 48, 1307 Copenhagen", "notes": "Coffee shop inside the National Gallery of Denmark. Great classic Danish breakfast - sourdough with whipped butter and comté. Doubles as a reason to visit the gallery."}, {"category": "Shopping", "name": "Knast", "lat": 55.67769, "lng": 12.564695, "address": "Elmegade 14, 2200 Copenhagen", "notes": "Handmade furniture and ceramics shop, plus craft workshops."}, {"category": "Things to do", "name": "Kulturårnet watchtower café", "lat": 55.684536, "lng": 12.575363, "address": "Frederiksholms Kanal, 1220 Copenhagen", "notes": "Café in an old watchtower on a bridge - one of the best sunset spots in the city. Arrive early."}, {"category": "Eats", "name": "Little Green Door", "lat": 55.675028, "lng": 12.569832, "address": "Kristen Bernikows Gade 4, 1105 Copenhagen", "notes": "Asian-themed cocktail bar hidden behind a little green door. Far East inspired menu, cocktail tasting evenings available."}, {"category": "Eats", "name": "Rug Bakery", "lat": 55.674831, "lng": 12.573127, "address": "Tietgensgade 35, 1704 Copenhagen", "notes": "In-house bakehouse at Villa Copenhagen hotel. Cardamom buns, croissants, and chocolate chip cookies. Great for a morning stop."}, {"category": "Things to do", "name": "The Royal Danish Opera House", "lat": 55.68319, "lng": 12.565541, "address": "Ekvipagemestervej 10, 1438 Copenhagen", "notes": "Striking modern building on the waterfront designed by Henning Larsen. Free to walk around outside - the Opera Park with 19th-century-style gardens is nearby too."}, {"category": "Things to do", "name": "The Thinker (scrap metal)", "lat": 55.679703, "lng": 12.570598, "address": "Langelinie, 2100 Copenhagen", "notes": "Scrap metal tribute to Rodin's Thinker near the Little Mermaid. Far more interesting than the original."}, {"category": "Shopping", "name": "Tú a Tú", "lat": 55.677181, "lng": 12.574469, "address": "Elmegade 5, 2200 Copenhagen", "notes": "Curated secondhand Scandinavian womenswear - Ganni, Acne Studios."}, {"category": "Things to do", "name": "Valbyparken", "lat": 55.679078, "lng": 12.566542, "address": "Valbyparken, 2500 Valby", "notes": "Overlooked Copenhagen park with 15 themed gardens, a massive playground, and a new beach."}, {"category": "Things to do", "name": "Dragør & Goose Republic", "lat": 55.650472, "lng": 12.452759, "address": "Dragør, 2791 Denmark", "notes": "[Day Trip] Charming harbor village with a village of geese coops. Take bus 250S from the city center."}, {"category": "Things to do", "name": "H.C. Andersen House, Odense", "lat": 55.646414, "lng": 12.447741, "address": "Bangs Boder 29, 5000 Odense, Denmark", "notes": "[Day Trip] Immersive subterranean museum in Andersen's birthplace designed by Kengo Kuma. 90 min by train. Also see the childhood home and gardens."}, {"category": "Things to do", "name": "Louisiana Museum of Modern Art", "lat": 55.655942, "lng": 12.451799, "address": "Gl Strandvej 13, 3050 Humlebæk, Denmark", "notes": "[Day Trip] 45 min from Copenhagen by train. Includes a Yayoi Kusama infinity room. Take train to Humlebæk."}, {"category": "Things to do", "name": "Møns Klint cliffs", "lat": 55.649257, "lng": 12.450211, "address": "Møns Klint, 4791 Borre, Denmark", "notes": "[Day Trip] Dramatic white chalk cliffs on a UNESCO-listed island. Dark skies for stargazing at night. About 2 hours from Copenhagen by car."}, {"category": "Things to do", "name": "Ordrupgaard", "lat": 55.645452, "lng": 12.446696, "address": "Vilvordevej 110, 2920 Charlottenlund, Denmark", "notes": "Underrated world-class museum in Jægersborg Forest, 5 miles north of the city. Danish and French 19th-century art, sculpture park, and a Zaha Hadid extension. Also check if Finn Juhl's house is open."}, {"category": "Things to do", "name": "Rebild National Park", "lat": 55.648057, "lng": 12.45106, "address": "Rebild National Park, 9520 Skørping, Denmark", "notes": "[Day Trip] Purple heather fields and a crooked Troll Forest in North Jutland. About a 4-hour drive."}, {"category": "Eats", "name": "Skærsøgaard", "lat": 55.646761, "lng": 12.446643, "address": "Skærsøvej 6, 6000 Kolding, Denmark", "notes": "[Day Trip] Denmark's first authorized winery near Kolding in southern Denmark. Organic wines."}, {"category": "Things to do", "name": "Viking Ship Museum, Roskilde", "lat": 55.644852, "lng": 12.451573, "address": "Vindeboder 12, 4000 Roskilde, Denmark", "notes": "[Day Trip] See 1,000-year-old Viking ships and sail a reconstructed one on the fjord."}]},
+stockholm:{label:"Stockholm",center:[59.3293,18.0686],zoom:13,accent:"#C96A41",places:[{"category": "Eats", "name": "Vete-Katten", "lat": 59.3342047, "lng": 18.0586011, "address": "Kungsgatan 55, 111 22 Stockholm", "notes": "Historic Swedish fika institution. Try the princess cake and cinnamon buns."}, {"category": "Things to do", "name": "Vasa Museum", "lat": 59.3280233, "lng": 18.0913964, "address": "Galärvarvsvägen 14, 115 21 Stockholm", "notes": "17th-century warship preserved almost entirely intact. A must-see."}, {"category": "Things to do", "name": "ABBA The Museum", "lat": 59.3250909, "lng": 18.0967807, "address": "Djurgårdsvägen 68, 115 21 Stockholm", "notes": "Interactive museum celebrating Sweden's most iconic pop group."}, {"category": "Things to do", "name": "The Viking Museum", "lat": 59.326643, "lng": 18.0951796, "address": "Djurgårdsvägen 15, 115 21 Stockholm", "notes": "Immersive Viking Age experience with a dark ride through history."}, {"category": "Shopping", "name": "Svenskt Tenn", "lat": 59.3323876, "lng": 18.0790962, "address": "Strandvägen 5, 114 51 Stockholm", "notes": "Iconic Swedish design store. Josef Frank prints, furniture, homewares."}, {"category": "Eats", "name": "Hermans", "lat": 59.3175886, "lng": 18.0839872, "address": "Fjällgatan 23B, 116 28 Stockholm", "notes": "Vegetarian buffet with one of Stockholm's best views. All-you-can-eat."}, {"category": "Coffee", "name": "Café Schweizer", "lat": 59.3260983, "lng": 18.0688496, "address": "Västerlånggatan 9, 111 29 Stockholm", "notes": "Charming Gamla Stan café. Great cinnamon buns and Swedish pastries."}, {"category": "Eats", "name": "Stikki Nikki", "lat": 59.3367119, "lng": 18.0588783, "address": "Drottninggatan 90B, 111 36 Stockholm", "notes": "Best ice cream in Stockholm. Huge scoops, creative flavors. Try brown butter."}]}
+};
+const CAT_COLORS={"Eats":"#C96A41","Coffee":"#B98A2E","Shopping":"#DB9CAA","Things to do":"#6F79C2"};
+const map=L.map('map',{zoomControl:true});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',maxZoom:19}).addTo(map);
+
+function makeIcon(cat){const c=CAT_COLORS[cat]||'#1E2027';return L.divIcon({className:'',html:`<div class="my-pin" style="background:${c}"><span>\u25cf</span></div>`,iconSize:[20,20],iconAnchor:[10,20],popupAnchor:[0,-18]});}
+function dirUrl(p){return`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=walking`;}
+function mapUrl(p){return`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;}
+
+// localStorage helpers
+function getStore(){try{return JSON.parse(localStorage.getItem('curated_data')||'{}');}catch(e){return{};}}
+function setStore(d){localStorage.setItem('curated_data',JSON.stringify(d));}
+function getUserData(city,id){const d=getStore();return(d[city]&&d[city][id])||{notes:'',visited:false,starred:false};}
+function setUserData(city,id,obj){const d=getStore();if(!d[city])d[city]={};d[city][id]=obj;setStore(d);}
+function getInfo(city,key){const d=getStore();return(d['_info_'+city]&&d['_info_'+city][key])||'';}
+function setInfo(city,key,val){const d=getStore();if(!d['_info_'+city])d['_info_'+city]={};d['_info_'+city][key]=val;setStore(d);}
+
+let currentCity=Object.keys(CITIES)[0];
+let activeCat='all';
+let markers={};
+let selectedId=null;
+let showStarredOnly=false;
+let currentView='map'; // 'map' or 'info'
+
+const listEl=document.getElementById('list');
+const searchEl=document.getElementById('search');
+const chipsEl=document.getElementById('chips');
+const navRowEl=document.getElementById('navRow');
+const cityTitleEl=document.getElementById('cityTitle');
+const sidebarEl=document.getElementById('sidebar');
+const mapEl=document.getElementById('map');
+const infoPanelEl=document.getElementById('infoPanel');
+
+function buildNav(){
+navRowEl.innerHTML='';
+Object.keys(CITIES).forEach(k=>{
+const t=document.createElement('button');
+t.className='nav-tab'+(k===currentCity&&currentView==='map'?' active':'');
+t.textContent=CITIES[k].label;
+t.addEventListener('click',()=>{currentView='map';switchCity(k);});
+navRowEl.appendChild(t);
+});
+// info tab
+const it=document.createElement('button');
+it.className='nav-tab info-tab'+(currentView==='info'?' active':'');
+it.textContent='\u2139 Info';
+it.addEventListener('click',()=>toggleInfo());
+navRowEl.appendChild(it);
+}
+
+function toggleInfo(){
+if(currentView==='info'){currentView='map';showMapView();}
+else{currentView='info';showInfoView();}
+buildNav();
+}
+
+function showMapView(){
+sidebarEl.style.display='';mapEl.style.display='';infoPanelEl.classList.remove('active');
+map.invalidateSize();
+}
+function showInfoView(){
+sidebarEl.style.display='none';mapEl.style.display='none';infoPanelEl.classList.add('active');
+infoPanelEl.style.gridColumn='1/-1';
+document.getElementById('infoTitle').textContent=CITIES[currentCity].label.toUpperCase()+' INFO';
+document.getElementById('infoTitle').style.color=CITIES[currentCity].accent;
+['Apps','Money','Neighborhoods','Tips'].forEach(k=>{
+const el=document.getElementById('info'+k);
+el.value=getInfo(currentCity,k.toLowerCase());
+el.oninput=()=>setInfo(currentCity,k.toLowerCase(),el.value);
+});
+}
+
+function switchCity(key){
+currentCity=key;selectedId=null;activeCat='all';showStarredOnly=false;
+searchEl.value='';
+document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active',c.dataset.cat==='all'));
+document.querySelector('.star-chip').classList.remove('active');
+const city=CITIES[key];
+cityTitleEl.textContent=city.label.toUpperCase();
+cityTitleEl.style.color=city.accent;
+document.documentElement.style.setProperty('--accent',city.accent);
+document.title='Curated '+city.label;
+buildNav();loadCityMarkers();map.setView(city.center,city.zoom);
+if(currentView==='map')showMapView();
+render();
+}
+
+function loadCityMarkers(){
+Object.values(markers).forEach(m=>map.removeLayer(m));markers={};
+const places=CITIES[currentCity].places;
+places.forEach((p,i)=>{
+p._id=i;
+const m=L.marker([p.lat,p.lng],{icon:makeIcon(p.category)});
+const catColor=CAT_COLORS[p.category]||'#1E2027';
+const notesHtml=p.notes?`<div class="pop-notes">${p.notes}</div>`:'';
+m.bindPopup(`<div class="pop-cat" style="color:${catColor}">${p.category}</div>
+<div class="pop-title">${p.name}</div><div class="pop-addr">${p.address}</div>${notesHtml}
+<div class="pop-actions"><a class="pop-link" href="${dirUrl(p)}" target="_blank" rel="noopener">\u21b3 Directions</a>
+<a class="pop-link ghost" href="${mapUrl(p)}" target="_blank" rel="noopener">View on map</a></div>`);
+m.on('click',()=>selectCard(p._id));
+markers[i]=m;
+});
+}
+
+function matches(p,q,cat){
+const ud=getUserData(currentCity,p._id);
+if(showStarredOnly&&!ud.starred)return false;
+const inCat=(cat==='all')||(p.category===cat);
+if(!inCat)return false;
+if(!q)return true;
+const hay=(p.name+' '+p.address+' '+p.notes+' '+(ud.notes||'')).toLowerCase();
+return hay.includes(q);
+}
+
+function render(){
+const places=CITIES[currentCity].places;
+const q=searchEl.value.trim().toLowerCase();
+const visible=places.filter(p=>matches(p,q,activeCat));
+Object.values(markers).forEach(m=>map.removeLayer(m));
+visible.forEach(p=>markers[p._id].addTo(map));
+document.getElementById('countShown').textContent=visible.length;
+document.getElementById('countTotal').textContent=places.length;
+listEl.innerHTML='';
+if(!visible.length){listEl.innerHTML='<div class="empty">No matches found.</div>';return;}
+const groups={};visible.forEach(p=>{groups[p.category]=groups[p.category]||[];groups[p.category].push(p);});
+['Eats','Coffee','Shopping','Things to do'].forEach(cat=>{
+if(!groups[cat])return;
+const lbl=document.createElement('div');lbl.className='group-label';lbl.dataset.cat=cat;
+lbl.textContent=cat+' \u2014 '+groups[cat].length;listEl.appendChild(lbl);
+groups[cat].forEach(p=>{
+const ud=getUserData(currentCity,p._id);
+const card=document.createElement('div');
+card.className='card'+(p._id===selectedId?' selected':'');
+card.dataset.id=p._id;
+card.innerHTML=`<div class="card-top"><div><div class="card-meta"><span class="cat-tag" data-cat="${p.category}">${p.category}</span>${ud.visited?'<span class="visited-badge">\u2713 Visited</span>':''}</div>
+<h3>${p.name}</h3><p class="addr">${p.address}</p>
+${p.notes?`<p class="note-text">${p.notes}</p>`:''}</div>
+<div class="card-actions-row"><button class="star-btn${ud.starred?' active':''}" title="Star">\u2605</button>
+<button class="visit-btn${ud.visited?' active':''}" title="Mark visited">\u2713</button></div></div>
+<textarea class="note-input" placeholder="Add a note..." rows="1">${ud.notes||''}</textarea>
+<div class="card-links"><a class="dir-link" href="${dirUrl(p)}" target="_blank" rel="noopener">\u21b3 Directions</a></div>`;
+// events
+card.querySelector('.star-btn').addEventListener('click',e=>{e.stopPropagation();ud.starred=!ud.starred;setUserData(currentCity,p._id,ud);render();});
+card.querySelector('.visit-btn').addEventListener('click',e=>{e.stopPropagation();ud.visited=!ud.visited;setUserData(currentCity,p._id,ud);render();});
+card.querySelector('.note-input').addEventListener('input',e=>{e.stopPropagation();ud.notes=e.target.value;setUserData(currentCity,p._id,ud);});
+card.querySelector('.note-input').addEventListener('click',e=>e.stopPropagation());
+card.querySelector('.dir-link').addEventListener('click',e=>e.stopPropagation());
+card.addEventListener('click',()=>{selectCard(p._id);map.flyTo([p.lat,p.lng],15,{duration:.6});markers[p._id].openPopup();});
+listEl.appendChild(card);
+});
+});
+}
+
+function selectCard(id){selectedId=id;document.querySelectorAll('.card').forEach(c=>c.classList.toggle('selected',Number(c.dataset.id)===id));}
+
+chipsEl.addEventListener('click',e=>{
+const chip=e.target.closest('.chip');if(!chip)return;
+if(chip.dataset.cat==='starred'){
+showStarredOnly=!showStarredOnly;chip.classList.toggle('active',showStarredOnly);
+}else{
+showStarredOnly=false;document.querySelector('.star-chip').classList.remove('active');
+document.querySelectorAll('.chip:not(.star-chip)').forEach(c=>c.classList.remove('active'));
+chip.classList.add('active');activeCat=chip.dataset.cat;
+}
+render();
+});
+
+searchEl.addEventListener('input',render);
+buildNav();loadCityMarkers();
+map.setView(CITIES[currentCity].center,CITIES[currentCity].zoom);
+render();
+</script>
+</body>
+</html>
